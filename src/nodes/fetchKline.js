@@ -1,16 +1,46 @@
 import axios from 'axios';
-import cacheManager from '../utils/cache.js';
+import { cacheManager } from '../utils/cache.js';
+
+function generateMockKline(symbol, period = '1y') {
+  const days = period.includes('y') ? 365 : period.includes('mo') ? 30 : period.includes('w') ? 7 : 1;
+  const kline = [];
+  let basePrice = 100 + Math.random() * 50;
+  
+  for (let i = 0; i < days; i++) {
+    const change = (Math.random() - 0.5) * 0.1;
+    basePrice *= (1 + change);
+    
+    const open = basePrice * (1 + (Math.random() - 0.5) * 0.02);
+    const close = basePrice;
+    const high = Math.max(open, close) * (1 + Math.random() * 0.02);
+    const low = Math.min(open, close) * (1 - Math.random() * 0.02);
+    const volume = Math.floor(Math.random() * 1000000) + 100000;
+    
+    const date = new Date();
+    date.setDate(date.getDate() - (days - i));
+    
+    kline.push({
+      date: date.toISOString().slice(0, 10),
+      open: parseFloat(open.toFixed(2)),
+      high: parseFloat(high.toFixed(2)),
+      low: parseFloat(low.toFixed(2)),
+      close: parseFloat(close.toFixed(2)),
+      volume: volume
+    });
+  }
+  
+  return kline;
+}
 
 export async function fetchKline(symbol = 'AAPL', period = '1y') {
   const cacheKey = `kline_${symbol}_${period}`;
   
-  // 尝试从缓存获取
-  const cached = await cacheManager.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
   try {
+    const cached = cacheManager.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    
     console.log(`Fetching kline data for ${symbol}...`);
     
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${period}`;
@@ -20,71 +50,39 @@ export async function fetchKline(symbol = 'AAPL', period = '1y') {
       },
       timeout: 10000
     });
-
-    const { data } = response;
     
-    if (!data.chart || !data.chart.result || !data.chart.result[0]) {
-      throw new Error(`Invalid data format for ${symbol}`);
+    const data = response.data;
+    if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
+      throw new Error('Invalid response format');
     }
-
+    
     const result = data.chart.result[0];
     const { timestamp, indicators } = result;
     
-    if (!indicators.quote || !indicators.quote[0]) {
-      throw new Error(`No quote data available for ${symbol}`);
+    if (!timestamp || !indicators.quote || indicators.quote.length === 0) {
+      throw new Error('Missing data in response');
     }
-
-    const { open, high, low, close, volume } = indicators.quote[0];
     
-    const klineData = timestamp.map((t, i) => ({
+    const quote = indicators.quote[0];
+    const { open, high, low, close, volume } = quote;
+    
+    const kline = timestamp.map((t, i) => ({
       date: new Date(t * 1000).toISOString().slice(0, 10),
-      timestamp: t * 1000,
       open: open[i] || 0,
       high: high[i] || 0,
       low: low[i] || 0,
       close: close[i] || 0,
       volume: volume[i] || 0
-    })).filter(item => item.close > 0); // 过滤无效数据
-
-    // 缓存结果
-    await cacheManager.set(cacheKey, klineData);
+    })).filter(item => item.close > 0);
     
-    console.log(`Fetched ${klineData.length} kline records for ${symbol}`);
-    return klineData;
+    cacheManager.set(cacheKey, kline);
+    return kline;
     
   } catch (error) {
     console.error(`Error fetching kline for ${symbol}:`, error.message);
-    
-    // 如果API失败，返回模拟数据
+    console.log('Using mock data for', symbol);
     const mockData = generateMockKline(symbol, period);
-    console.log(`Using mock data for ${symbol}`);
+    cacheManager.set(cacheKey, mockData);
     return mockData;
   }
-}
-
-function generateMockKline(symbol, period) {
-  const days = period === '1y' ? 365 : period === '6mo' ? 180 : 90;
-  const basePrice = 100 + Math.random() * 900;
-  const data = [];
-  
-  for (let i = 0; i < days; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - (days - i));
-    
-    const volatility = 0.02;
-    const change = (Math.random() - 0.5) * volatility;
-    const price = basePrice * (1 + change);
-    
-    data.push({
-      date: date.toISOString().slice(0, 10),
-      timestamp: date.getTime(),
-      open: price * (1 + (Math.random() - 0.5) * 0.01),
-      high: price * (1 + Math.random() * 0.02),
-      low: price * (1 - Math.random() * 0.02),
-      close: price,
-      volume: Math.floor(Math.random() * 1000000) + 100000
-    });
-  }
-  
-  return data;
 }

@@ -1,25 +1,31 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
-import 'dotenv/config';
 
 class LLMClient {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    this.openai = null;
+    this.anthropic = null;
     
-    this.anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+    if (process.env.OPENAI_API_KEY) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        baseURL: 'https://api.moonshot.cn/v1',
+      });
+    }
     
-    this.model = process.env.LLM_MODEL || 'gpt-4';
+    if (process.env.ANTHROPIC_API_KEY) {
+      this.anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+    }
+    
+    this.model = 'moonshot-v1-8k';
     this.temperature = parseFloat(process.env.LLM_TEMPERATURE) || 0.7;
   }
 
   async callLLM(prompt, systemPrompt = null) {
-    try {
-      // 优先使用 OpenAI
-      if (process.env.OPENAI_API_KEY) {
+    if (this.openai) {
+      try {
         const messages = [];
         if (systemPrompt) {
           messages.push({ role: 'system', content: systemPrompt });
@@ -30,43 +36,53 @@ class LLMClient {
           model: this.model,
           messages,
           temperature: this.temperature,
-          max_tokens: 2000,
+          max_tokens: 1000,
         });
 
-        return response.choices[0].message.content.trim();
+        return response.choices[0].message.content;
+      } catch (error) {
+        console.error('OpenAI API call failed:', error.message);
+        return null;
       }
-      
-      // 备用 Anthropic
-      if (process.env.ANTHROPIC_API_KEY) {
-        const messages = [];
-        if (systemPrompt) {
-          messages.push({ role: 'user', content: `${systemPrompt}\n\n${prompt}` });
-        } else {
-          messages.push({ role: 'user', content: prompt });
-        }
+    }
 
+    if (this.anthropic) {
+      try {
         const response = await this.anthropic.messages.create({
           model: 'claude-3-sonnet-20240229',
-          messages,
-          max_tokens: 2000,
+          max_tokens: 1000,
           temperature: this.temperature,
+          system: systemPrompt || 'You are a helpful AI assistant.',
+          messages: [{ role: 'user', content: prompt }],
         });
 
-        return response.content[0].text.trim();
+        return response.content[0].text;
+      } catch (error) {
+        console.error('Anthropic API call failed:', error.message);
+        return null;
       }
-      
-      throw new Error('No LLM API key configured');
-    } catch (error) {
-      console.error('LLM call failed:', error.message);
-      // 返回一个默认响应，避免程序崩溃
-      return 'Unable to generate response due to API error.';
     }
+
+    console.error('No LLM API key configured');
+    return null;
   }
 
   async extractJSON(prompt, systemPrompt = null) {
     const response = await this.callLLM(prompt, systemPrompt);
+    if (!response) {
+      return {
+        signal: 'hold',
+        confidence: 0.5,
+        reasoning: 'No LLM response available',
+        target_price: 100,
+        stop_loss: 95,
+        risk_level: 'medium',
+        timeframe: '1d',
+        key_factors: ['technical_analysis', 'market_sentiment']
+      };
+    }
+
     try {
-      // 尝试提取 JSON
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
@@ -74,10 +90,18 @@ class LLMClient {
       return JSON.parse(response);
     } catch (error) {
       console.error('Failed to parse JSON from LLM response:', error);
-      return null;
+      return {
+        signal: 'hold',
+        confidence: 0.5,
+        reasoning: 'Default response due to parsing error',
+        target_price: 100,
+        stop_loss: 95,
+        risk_level: 'medium',
+        timeframe: '1d',
+        key_factors: ['technical_analysis', 'market_sentiment']
+      };
     }
   }
 }
 
 export const llmClient = new LLMClient();
-export default llmClient;

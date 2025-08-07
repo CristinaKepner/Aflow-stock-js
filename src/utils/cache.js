@@ -1,104 +1,86 @@
 import fs from 'fs-extra';
 import path from 'path';
-import crypto from 'crypto';
 
 class CacheManager {
   constructor() {
     this.cacheDir = 'storage/cache';
-    this.enabled = process.env.CACHE_ENABLED === 'true';
-    this.ttl = parseInt(process.env.CACHE_TTL) || 3600; // 默认1小时
-    
-    // 确保缓存目录存在
-    fs.ensureDirSync(this.cacheDir);
+    this.ensureCacheDir();
   }
 
-  generateKey(data) {
-    return crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
-  }
-
-  getCachePath(key) {
-    return path.join(this.cacheDir, `${key}.json`);
-  }
-
-  async get(key) {
-    if (!this.enabled) return null;
-    
-    try {
-      const cachePath = this.getCachePath(key);
-      if (await fs.pathExists(cachePath)) {
-        const data = await fs.readJson(cachePath);
-        const now = Date.now();
-        
-        // 检查是否过期
-        if (data.timestamp && (now - data.timestamp) < this.ttl * 1000) {
-          return data.value;
-        } else {
-          // 删除过期缓存
-          await fs.remove(cachePath);
-        }
-      }
-    } catch (error) {
-      console.error('Cache read error:', error.message);
+  ensureCacheDir() {
+    if (!fs.existsSync(this.cacheDir)) {
+      fs.mkdirpSync(this.cacheDir);
     }
-    
-    return null;
   }
 
-  async set(key, value) {
-    if (!this.enabled) return;
-    
+  generateKey(key) {
+    return key.replace(/[^a-zA-Z0-9]/g, '_');
+  }
+
+  get(key) {
     try {
-      const cachePath = this.getCachePath(key);
+      const filename = path.join(this.cacheDir, `${this.generateKey(key)}.json`);
+      if (fs.existsSync(filename)) {
+        const data = fs.readJsonSync(filename);
+        if (data.expiry && Date.now() > data.expiry) {
+          fs.removeSync(filename);
+          return null;
+        }
+        return data.value;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  set(key, value, ttl = 3600) {
+    try {
+      const filename = path.join(this.cacheDir, `${this.generateKey(key)}.json`);
       const data = {
         value,
+        expiry: Date.now() + (ttl * 1000),
         timestamp: Date.now()
       };
-      
-      await fs.writeJson(cachePath, data, { spaces: 2 });
+      fs.writeJsonSync(filename, data);
     } catch (error) {
-      console.error('Cache write error:', error.message);
+      console.error('Cache set error:', error.message);
     }
   }
 
-  async clear() {
-    if (!this.enabled) return;
-    
+  clear() {
     try {
-      await fs.emptyDir(this.cacheDir);
-      console.log('Cache cleared');
+      if (fs.existsSync(this.cacheDir)) {
+        fs.removeSync(this.cacheDir);
+        fs.mkdirpSync(this.cacheDir);
+      }
     } catch (error) {
       console.error('Cache clear error:', error.message);
     }
   }
 
-  async getStats() {
-    if (!this.enabled) return { enabled: false };
-    
+  getStats() {
     try {
-      const files = await fs.readdir(this.cacheDir);
-      const stats = await Promise.all(
-        files.map(async (file) => {
-          const filePath = path.join(this.cacheDir, file);
-          const stat = await fs.stat(filePath);
-          return {
-            file,
-            size: stat.size,
-            modified: stat.mtime
-          };
-        })
-      );
+      if (!fs.existsSync(this.cacheDir)) {
+        return { count: 0, size: 0 };
+      }
       
-      return {
-        enabled: true,
-        fileCount: files.length,
-        files: stats
-      };
+      const files = fs.readdirSync(this.cacheDir);
+      const count = files.length;
+      let size = 0;
+      
+      files.forEach(file => {
+        const filepath = path.join(this.cacheDir, file);
+        const stats = fs.statSync(filepath);
+        size += stats.size;
+      });
+      
+      return { count, size };
     } catch (error) {
-      console.error('Cache stats error:', error.message);
-      return { enabled: false, error: error.message };
+      return { count: 0, size: 0 };
     }
   }
 }
 
 export const cacheManager = new CacheManager();
-export default cacheManager;
+

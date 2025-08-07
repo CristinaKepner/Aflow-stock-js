@@ -1,4 +1,152 @@
-# AFlow Stock Trading Workflow Optimization
+# AFlow Stock Analysis System
+
+基于AFlow算法的股票量化分析系统，支持自动工作流优化、多符号并行分析和实时模拟交易。
+
+## 📦 快速安装
+
+```bash
+git clone https://github.com/yourusername/aflow-stock-js.git
+cd aflow-stock-js
+chmod +x deploy.sh
+./deploy.sh
+```
+
+## ⚙️ 配置
+
+复制环境变量模板并配置API密钥：
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件：
+
+```env
+# LLM API Keys
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
+# Stock Data API Keys (Optional)
+ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
+YAHOO_FINANCE_API_KEY=your_yahoo_finance_key
+
+# Configuration
+DEFAULT_SYMBOL=AAPL
+BACKTEST_DAYS=30
+MAX_SEARCH_ROUNDS=5
+LLM_MODEL=moonshot-v1-8k
+LLM_TEMPERATURE=0.7
+CACHE_ENABLED=true
+CACHE_TTL=3600
+```
+
+## 🎯 使用方法
+
+### 快速开始
+
+```bash
+npm start
+```
+
+### 多符号并行优化
+
+```bash
+npm run multisymbol
+```
+
+### 启动完整系统
+
+```bash
+npm run full
+```
+
+访问前端界面：http://localhost:3000
+
+## 📁 项目结构
+
+```
+aflow-stock-js/
+├── src/
+│   ├── nodes/           # 数据节点
+│   │   ├── fetchKline.js    # K线数据获取
+│   │   ├── technical.js     # 技术指标计算
+│   │   ├── news.js          # 新闻数据获取
+│   │   ├── sentiment.js     # 情感分析
+│   │   ├── predict.js       # 预测生成
+│   │   └── eastmoney.js     # 东方财富数据
+│   ├── operators/       # 工作流操作符
+│   │   └── stockOperators.js
+│   ├── search/          # 搜索算法
+│   │   ├── mcts.js          # 蒙特卡洛树搜索
+│   │   ├── optimizer.js     # AFlow优化器
+│   │   └── multiSymbolOptimizer.js
+│   ├── eval/            # 评估模块
+│   │   └── backtestEval.js
+│   ├── trading/         # 交易模块
+│   │   └── paperTrading.js
+│   ├── utils/           # 工具模块
+│   │   ├── llm.js           # LLM客户端
+│   │   └── cache.js         # 缓存管理
+│   └── server.js        # 后端服务器
+├── frontend/            # React前端
+├── test/                # 测试脚本
+├── storage/             # 数据存储
+├── deploy.sh            # 部署脚本
+├── package.json
+└── README.md
+```
+
+## 🔧 API接口
+
+### Dashboard统计
+- `GET /api/dashboard/stats` - 获取仪表板统计数据
+
+### 工作流管理
+- `POST /api/workflow/run` - 运行工作流
+- `POST /api/workflow/save` - 保存工作流
+- `GET /api/workflow/list` - 获取工作流列表
+
+### 模拟交易
+- `POST /api/paper-trading/start` - 启动模拟交易
+- `POST /api/paper-trading/stop` - 停止模拟交易
+- `GET /api/paper-trading/status` - 获取交易状态
+
+### 优化
+- `POST /api/optimization/single` - 单符号优化
+- `POST /api/optimization/multi-symbol` - 多符号优化
+
+### 数据获取
+- `GET /api/data/kline/:symbol` - 获取K线数据
+- `GET /api/data/news/:symbol` - 获取新闻数据
+- `GET /api/data/technical/:symbol` - 获取技术指标
+
+## 📊 示例输出
+
+```
+🚀 Starting AFlow optimization for AAPL
+📊 Max rounds: 5
+
+🔄 Round 1/5
+🔍 MCTS search completed. Best score: 0.083
+🤖 Generating improved workflow...
+✅ Improvement accepted: 8.33%
+Round 1 result: 58.33% (best: 58.33%)
+
+=== Backtest Results ===
+Symbol: AAPL
+Total Trades: 30
+Win Rate: 58.33%
+Total Return: 2.45%
+Avg Return: 0.08%
+Sharpe Ratio: 0.156
+```
+
+
+## 🙏 致谢
+
+- [AFlow论文](https://arxiv.org/abs/2410.10762)
+- [FoundationAgents/AFlow](https://github.com/FoundationAgents/AFlow)
+
 
 **一句话总结：**  
 AFlow 就像一个“自动炼丹炉”，你给它一个问题（比如数学题、写代码、回答问题），它就能自己摸索出一套最有效的“解题步骤”，而且这个步骤比人类专家设计的还要好。
@@ -127,110 +275,3 @@ async def solve_math(problem):
 > 这就好像你从来没学过数学，但自己慢慢发现“做完题检查一遍”很重要一样，非常神奇！
 
 ---
-
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Paper](https://img.shields.io/badge/Paper-ICLR%202025-red.svg)](https://arxiv.org/abs/2410.10762)
-
-## 🚀 Quick Start
-
-### 1. Installation
-
-```bash
-git clone https://github.com/yourname/aflow-stock-js.git
-cd aflow-stock-js
-npm install
-```
-
-### 2. Configuration
-
-Copy the environment file and configure your API keys:
-
-```bash
-cp env.example .env
-```
-
-Edit `.env` file:
-```env
-# LLM API Keys (required for real optimization)
-OPENAI_API_KEY=sk-your-openai-api-key-here
-ANTHROPIC_API_KEY=sk-ant-your-anthropic-api-key-here
-
-# Configuration
-DEFAULT_SYMBOL=AAPL
-MAX_SEARCH_ROUNDS=15
-LLM_MODEL=gpt-4
-LLM_TEMPERATURE=0.7
-```
-
-### 3. Run Example
-
-```bash
-npm start
-```
-
-## 📁 Project Structure
-
-```
-aflow-stock-js/
-├── src/
-│   ├── nodes/                 # Individual workflow nodes
-│   │   ├── fetchKline.js     # Stock data fetching
-│   │   ├── technical.js      # Technical indicators
-│   │   ├── news.js          # News data collection
-│   │   ├── sentiment.js     # Sentiment analysis
-│   │   └── predict.js       # Trading signal generation
-│   ├── operators/            # Workflow combinations
-│   │   └── stockOperators.js # Predefined workflow templates
-│   ├── search/              # Search algorithms
-│   │   ├── mcts.js         # Monte Carlo Tree Search
-│   │   └── optimizer.js    # AFlow optimizer
-│   ├── eval/               # Evaluation modules
-│   │   └── backtestEval.js # Backtesting engine
-│   └── utils/              # Utilities
-│       ├── llm.js         # LLM client
-│       └── cache.js       # Caching system
-├── storage/               # Results and cache storage
-├── test/                 # Test files
-│   └── runExample.js     # Main example
-├── package.json
-└── README.md
-```
-
-### Debug Mode
-
-Enable debug logging:
-
-```javascript
-process.env.DEBUG = 'true';
-```
-
-### Mock Mode
-
-Run without API keys (uses mock data):
-
-```bash
-# No API keys needed
-npm start
-```
-
-## 📚 References
-
-- [AFlow Paper](https://arxiv.org/abs/2410.10762) - ICLR 2025 Oral
-- [FoundationAgents/AFlow](https://github.com/FoundationAgents/AFlow) - Original implementation
-- [Technical Indicators](https://github.com/anandanand84/technicalindicators) - Technical analysis library
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- ICLR 2025 AFlow paper authors
-- Yahoo Finance for market data
-- OpenAI and Anthropic for LLM APIs
-- Technical indicators library contributors
-
----
-
-**Note**: This is a research implementation. Use at your own risk for actual trading decisions.

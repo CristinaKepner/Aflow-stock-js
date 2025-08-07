@@ -1,0 +1,58 @@
+.demo-logo-vertical {
+  height: 32px;
+  margin: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1890ff;
+  font-weight: bold;
+}
+
+.ant-layout-sider-collapsed .demo-logo-vertical {
+  margin: 8px;
+}
+
+.react-flow__node {
+  cursor: pointer;
+}
+
+.react-flow__node:hover {
+  opacity: 0.8;
+}
+
+.react-flow__controls {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.react-flow__minimap {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.monaco-editor {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ant-statistic-content {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.ant-progress-circle .ant-progress-text {
+  font-size: 18px;
+  font-weight: bold;
+}
