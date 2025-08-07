@@ -5,7 +5,7 @@
 ## 📦 快速安装
 
 ```bash
-git clone https://github.com/yourusername/aflow-stock-js.git
+git clone git@github.com:CristinaKepner/Aflow-stock-js.git
 cd aflow-stock-js
 chmod +x deploy.sh
 ./deploy.sh
@@ -148,7 +148,8 @@ Sharpe Ratio: 0.156
 - [FoundationAgents/AFlow](https://github.com/FoundationAgents/AFlow)
 
 
-**一句话总结：**  
+## 🙏 关于 Aflow
+
 AFlow 就像一个“自动炼丹炉”，你给它一个问题（比如数学题、写代码、回答问题），它就能自己摸索出一套最有效的“解题步骤”，而且这个步骤比人类专家设计的还要好。
 
 ---
