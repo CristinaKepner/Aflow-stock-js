@@ -2,7 +2,10 @@ import axios from 'axios';
 import { cacheManager } from '../utils/cache.js';
 
 function generateMockKline(symbol, period = '1y') {
-  const days = period.includes('y') ? 365 : period.includes('mo') ? 30 : period.includes('w') ? 7 : 1;
+  const days = period.includes('y') ? 365 : 
+               period.includes('mo') ? 30 : 
+               period.includes('w') ? 7 : 
+               parseInt(period.replace('d', '')) || 60; // 默认60天
   const kline = [];
   let basePrice = 100 + Math.random() * 50;
   

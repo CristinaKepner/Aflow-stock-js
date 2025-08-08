@@ -23,26 +23,44 @@ class LLMClient {
     this.temperature = parseFloat(process.env.LLM_TEMPERATURE) || 0.7;
   }
 
-  async callLLM(prompt, systemPrompt = null) {
+  async callLLM(prompt, systemPrompt = null, maxRetries = 3) {
+    if (!this.openai && !this.anthropic) {
+      console.log('No LLM API key configured');
+      return null;
+    }
+    
     if (this.openai) {
-      try {
-        const messages = [];
-        if (systemPrompt) {
-          messages.push({ role: 'system', content: systemPrompt });
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const messages = [];
+          if (systemPrompt) {
+            messages.push({ role: 'system', content: systemPrompt });
+          }
+          messages.push({ role: 'user', content: prompt });
+
+          const response = await this.openai.chat.completions.create({
+            model: this.model,
+            messages,
+            temperature: this.temperature,
+            max_tokens: 1000,
+          });
+
+          return response.choices[0].message.content;
+        } catch (error) {
+          console.error(`OpenAI API call failed (attempt ${attempt}/${maxRetries}):`, error.message);
+          
+          if (error.message.includes('429') || error.message.includes('rate limit') || error.message.includes('RPM')) {
+            const delaySeconds = Math.min(2 ** attempt + Math.random() * 2, 60);
+            console.log(`⏳ Rate limit hit, waiting ${delaySeconds.toFixed(1)} seconds before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+            continue;
+          }
+          
+          if (attempt === maxRetries) {
+            console.log('💡 Max retries reached, API unavailable');
+            return null;
+          }
         }
-        messages.push({ role: 'user', content: prompt });
-
-        const response = await this.openai.chat.completions.create({
-          model: this.model,
-          messages,
-          temperature: this.temperature,
-          max_tokens: 1000,
-        });
-
-        return response.choices[0].message.content;
-      } catch (error) {
-        console.error('OpenAI API call failed:', error.message);
-        return null;
       }
     }
 

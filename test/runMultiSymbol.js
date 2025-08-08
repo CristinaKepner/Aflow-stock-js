@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import MultiSymbolOptimizer from '../src/search/multiSymbolOptimizer.js';
+import { MultiSymbolOptimizer } from '../src/search/multiSymbolOptimizer.js';
 import { StockOperators } from '../src/operators/stockOperators.js';
 import { backtestEval } from '../src/eval/backtestEval.js';
 

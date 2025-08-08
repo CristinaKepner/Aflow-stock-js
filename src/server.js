@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
@@ -172,6 +173,175 @@ app.post('/api/optimization/single', async (req, res) => {
     const result = await optimizer.run();
     
     res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/optimization/real', async (req, res) => {
+  try {
+    const { symbol = 'AAPL', maxRounds = 3 } = req.body;
+    
+    res.writeHead(200, {
+      'Content-Type': 'text/plain',
+      'Transfer-Encoding': 'chunked',
+      'Access-Control-Allow-Origin': '*'
+    });
+    
+    const sendLog = (message, type = 'info') => {
+      res.write(JSON.stringify({ type: 'log', message, level: type, timestamp: new Date() }) + '\n');
+    };
+    
+    const sendData = (type, data) => {
+      res.write(JSON.stringify({ type, ...data, timestamp: new Date() }) + '\n');
+    };
+    
+    sendLog(`🚀 Starting AFlow optimization for ${symbol}`, 'success');
+    sendLog(`📊 Configuration: maxRounds=${maxRounds}`, 'info');
+    
+    const originalLog = console.log;
+    const originalError = console.error;
+    
+    console.log = (...args) => {
+      const message = args.join(' ');
+      sendLog(message, 'info');
+      originalLog(...args);
+    };
+    
+    console.error = (...args) => {
+      const message = args.join(' ');
+      sendLog(message, 'error');
+      originalError(...args);
+    };
+    
+    try {
+      const optimizer = new Optimizer({
+        operators: StockOperators,
+        evaluator: backtestEval,
+        symbol,
+        maxRounds
+      });
+      
+      const result = await optimizer.run();
+      
+      sendLog('\n=== Optimization Results ===', 'success');
+      sendLog(`Symbol: ${symbol}`, 'info');
+      sendLog(`Best Score: ${(result.score * 100).toFixed(2)}%`, 'success');
+      sendLog(`Workflow: ${result.workflow}`, 'info');
+      sendLog('💾 Results saved to storage/optimization_results.json', 'info');
+      
+      sendData('final_result', {
+        symbol,
+        score: result.score,
+        workflow: result.workflow,
+        timestamp: new Date()
+      });
+      
+    } catch (error) {
+      sendLog(`❌ Optimization error: ${error.message}`, 'error');
+    } finally {
+      console.log = originalLog;
+      console.error = originalError;
+    }
+    
+    sendLog('✅ Optimization completed!', 'success');
+    res.end();
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/optimization/multi', async (req, res) => {
+  try {
+    const { symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN'], maxConcurrent = 3 } = req.body;
+    
+    res.writeHead(200, {
+      'Content-Type': 'text/plain',
+      'Transfer-Encoding': 'chunked',
+      'Access-Control-Allow-Origin': '*'
+    });
+    
+    const sendLog = (message, type = 'info') => {
+      res.write(JSON.stringify({ type: 'log', message, level: type, timestamp: new Date() }) + '\n');
+    };
+    
+    const sendData = (type, data) => {
+      res.write(JSON.stringify({ type, ...data, timestamp: new Date() }) + '\n');
+    };
+    
+    sendLog(`🚀 Starting Multi-Symbol AFlow optimization`, 'success');
+    sendLog(`📊 Symbols: [${symbols.join(', ')}]`, 'info');
+    sendLog(`📊 Max concurrent: ${maxConcurrent}`, 'info');
+    
+    const originalLog = console.log;
+    const originalError = console.error;
+    
+    console.log = (...args) => {
+      const message = args.join(' ');
+      sendLog(message, 'info');
+      originalLog(...args);
+    };
+    
+    console.error = (...args) => {
+      const message = args.join(' ');
+      sendLog(message, 'error');
+      originalError(...args);
+    };
+    
+    try {
+      const multiOptimizer = new MultiSymbolOptimizer({
+        operators: StockOperators,
+        evaluator: backtestEval,
+        symbols,
+        maxConcurrent
+      });
+      const results = await multiOptimizer.run();
+      
+      sendLog('\n=== Multi-Symbol Optimization Results ===', 'success');
+      sendLog(`Total Time: ${results.totalTime}ms`, 'info');
+      sendLog(`Successful Symbols: ${results.successfulSymbols}/${symbols.length}`, 'info');
+      sendLog(`Average Score: ${(results.averageScore * 100).toFixed(2)}%`, 'info');
+      sendLog(`Global Best Score: ${(results.globalBestScore * 100).toFixed(2)}%`, 'success');
+      
+      sendLog('\nIndividual Symbol Results:', 'info');
+      sendLog('==========================', 'info');
+      
+      if (results.results && Array.isArray(results.results)) {
+        results.results.forEach((result, index) => {
+          const symbol = symbols[index];
+          if (result.status === 'fulfilled') {
+            sendLog(`${symbol}: ${(result.value.score * 100).toFixed(2)}%`, 'success');
+          } else {
+            sendLog(`${symbol}: Error`, 'error');
+          }
+        });
+      }
+      
+      sendLog(`\nBest Performing Symbol:`, 'info');
+      sendLog('========================', 'info');
+      sendLog(`Symbol: ${results.globalBestSymbol}`, 'success');
+      sendLog(`Score: ${(results.globalBestScore * 100).toFixed(2)}%`, 'success');
+      sendLog(`Workflow: ${results.globalBestWorkflow || 'Unable to generate response due to API error...'}`, 'info');
+      
+      sendData('multi_result', {
+        results: results.results,
+        totalTime: results.totalTime,
+        averageScore: results.averageScore,
+        globalBestScore: results.globalBestScore,
+        globalBestSymbol: results.globalBestSymbol
+      });
+      
+    } catch (error) {
+      sendLog(`❌ Multi-symbol optimization error: ${error.message}`, 'error');
+    } finally {
+      console.log = originalLog;
+      console.error = originalError;
+    }
+    
+    sendLog('✅ Multi-symbol optimization completed successfully!', 'success');
+    res.end();
+    
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

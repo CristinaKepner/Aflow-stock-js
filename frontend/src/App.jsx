@@ -5,11 +5,13 @@ import {
   CodeOutlined,
   LineChartOutlined,
   SettingOutlined,
+  RocketOutlined,
 } from '@ant-design/icons';
 import WorkflowEditor from './components/WorkflowEditor';
 import Dashboard from './components/Dashboard';
 import TradingView from './components/TradingView';
 import Settings from './components/Settings';
+import OptimizationLog from './components/OptimizationLog';
 import './App.css';
 
 const { Header, Sider, Content } = Layout;
@@ -25,6 +27,11 @@ function App() {
       key: 'dashboard',
       icon: <DashboardOutlined />,
       label: 'Dashboard',
+    },
+    {
+      key: 'optimization',
+      icon: <RocketOutlined />,
+      label: 'AFlow Optimization',
     },
     {
       key: 'workflow',
@@ -47,6 +54,8 @@ function App() {
     switch (selectedKey) {
       case 'dashboard':
         return <Dashboard />;
+      case 'optimization':
+        return <OptimizationLog />;
       case 'workflow':
         return <WorkflowEditor />;
       case 'trading':

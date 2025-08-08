@@ -37,8 +37,10 @@ function Dashboard() {
   const toggleTrading = async () => {
     try {
       const action = isRunning ? 'stop' : 'start';
-      const response = await fetch(`/api/trading/${action}`, {
+      const response = await fetch(`/api/paper-trading/${action}`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol: 'AAPL', initialCapital: 10000 })
       });
       
       if (response.ok) {
